@@ -34,12 +34,13 @@ func main() {
 }
 
 //export InitClient
-func InitClient(addressWithPort *C.char, user *C.char, psw *C.char) *C.char {
+func InitClient(addressWithPort *C.char, user *C.char, psw *C.char, shareName *C.char) *C.char {
 	goAddressWithPort := C.GoString(addressWithPort)
 	goUser := C.GoString(user)
 	goPsw := C.GoString(psw)
+	goShareName := C.GoString(shareName)
 	gClient = new(Client.Client)
-	gClient.NewClient(goAddressWithPort, goUser, goPsw)
+	gClient.NewClient(goAddressWithPort, goUser, goPsw, goShareName)
 	return nil
 }
 
@@ -62,6 +63,44 @@ func ListShares() *C.char {
 	}
 	return nil
 	// return C.CString(fmt.Sprintf("%s", ""))
+}
+
+//export AppendLine
+func AppendLine(fileName *C.char, strToWrite *C.char) *C.char {
+	goFileName := C.GoString(fileName)
+	goStrToWrite := C.GoString(strToWrite)
+	err := gClient.AppendLine(goFileName, goStrToWrite)
+	retErr := ""
+	if err != nil {
+		retErr = err.Error()
+		return C.CString(fmt.Sprintf("%s", retErr))
+	}
+	return nil
+}
+
+//export ReadFile
+func ReadFile(fileName *C.char) *C.char {
+	goFileName := C.GoString(fileName)
+	mystr, err := gClient.ReadFile(goFileName)
+	retErr := ""
+	if err != nil {
+		retErr = err.Error()
+		return C.CString(fmt.Sprintf("%s", retErr))
+	}
+	fmt.Println("mystr: %s", mystr)
+	return C.CString(fmt.Sprintf("%s", mystr))
+}
+
+//export RemoveFile
+func RemoveFile(fileName *C.char) *C.char {
+	goFileName := C.GoString(fileName)
+	err := gClient.RemoveFile(goFileName)
+	retErr := ""
+	if err != nil {
+		retErr = err.Error()
+		return C.CString(fmt.Sprintf("%s", retErr))
+	}
+	return nil
 }
 
 //export ListAllShares
