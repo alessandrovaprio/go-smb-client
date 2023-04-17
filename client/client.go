@@ -113,7 +113,7 @@ func (c *Client) AppendBytes(fileName string, bytes []byte, newLine bool) error 
 
 func (c *Client) ReadFile(fileName string) (string, error) {
 
-	f, err := openOrCreate(c, fileName)
+	f, err := openFile(c, fileName)
 	if err != nil {
 		fmt.Println("errrr: s%", err)
 		return "", err
@@ -136,10 +136,21 @@ func (c *Client) RemoveFile(fileName string) error {
 	err := c.share.Remove(fileName)
 	return err
 }
+func (c *Client) CreateFolder(name string) error {
+	err := c.share.Mkdir(name, os.ModeDir)
+	return err
+}
 func openOrCreate(c *Client, fileName string) (*smb2.File, error) {
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		f, err = c.share.Create(fileName)
+	}
+	return f, err
+}
+func openFile(c *Client, fileName string) (*smb2.File, error) {
+	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		return nil, err
 	}
 	return f, err
 }
