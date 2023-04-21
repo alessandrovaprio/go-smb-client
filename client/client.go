@@ -18,22 +18,29 @@ type Client struct {
 	share   *smb2.Share
 }
 
-func (c *Client) NewClient(addressWithPort string, username string, psw string, shareName string) {
+func (c *Client) NewClient(addressWithPort string, username string, psw string, shareName string) error {
 	var err error
-	c.conn = initConn(addressWithPort)
+	c.conn, err = initConn(addressWithPort)
+	if err != nil {
+		return err
+	}
 	c.dialer = initDialer(username, psw)
-	c.session = c.initSession()
+	c.session, err = c.initSession()
+	if err != nil {
+		return err
+	}
 	c.share, err = c.Mount(shareName)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
-func initConn(addressWithPort string) net.Conn {
+func initConn(addressWithPort string) (net.Conn, error) {
 	conn, err := net.Dial("tcp", addressWithPort)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return conn
+	return conn, nil
 
 }
 func initDialer(user string, psw string) *smb2.Dialer {
@@ -45,13 +52,13 @@ func initDialer(user string, psw string) *smb2.Dialer {
 	}
 	return dialer
 }
-func (c *Client) initSession() *smb2.Session {
+func (c *Client) initSession() (*smb2.Session, error) {
 	s, err := c.dialer.Dial(c.conn)
 	if err != nil {
 		fmt.Println(err)
-		panic(err)
+		return nil, err
 	}
-	return s
+	return s, nil
 }
 func (c *Client) CloseConn() {
 	defer c.share.Umount()
@@ -132,6 +139,31 @@ func (c *Client) ReadFile(fileName string) (string, error) {
 	return string(bs), nil
 }
 
+func (c *Client) ReadFileWithOffsets(fileName string, offsetStart int64, dimesion int64) (string, error) {
+
+	f, err := openFile(c, fileName)
+	if err != nil {
+		fmt.Println("errrr: s%", err)
+		return "", err
+	}
+
+	defer f.Close()
+	_, err = f.Seek(offsetStart, io.SeekStart)
+	if err != nil {
+		panic(err)
+	}
+	bs, err := ioutil.ReadAll(f)
+	if err != nil {
+		panic(err)
+	}
+
+	if dimesion > 0 {
+		return string(bs[0 : dimesion+1]), nil
+	}
+	return string(bs), nil
+
+}
+
 func (c *Client) RemoveFile(fileName string) error {
 	err := c.share.Remove(fileName)
 	return err
@@ -139,6 +171,13 @@ func (c *Client) RemoveFile(fileName string) error {
 func (c *Client) CreateFolder(name string) error {
 	err := c.share.Mkdir(name, os.ModeDir)
 	return err
+}
+func (c *Client) CheckIfFolderExists(name string) (bool, error) {
+	_, err := c.share.ReadDir(name)
+	if err != nil {
+		return false, err
+	}
+	return true, err
 }
 func openOrCreate(c *Client, fileName string) (*smb2.File, error) {
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
