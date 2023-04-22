@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"io"
 	"io/ioutil"
 	"net"
@@ -22,23 +23,23 @@ func (c *Client) NewClient(addressWithPort string, username string, psw string, 
 	var err error
 	c.conn, err = initConn(addressWithPort)
 	if err != nil {
-		return err
+		return formatErr(err)
 	}
 	c.dialer = initDialer(username, psw)
 	c.session, err = c.initSession()
 	if err != nil {
-		return err
+		return formatErr(err)
 	}
 	c.share, err = c.Mount(shareName)
 	if err != nil {
-		return err
+		return formatErr(err)
 	}
 	return nil
 }
 func initConn(addressWithPort string) (net.Conn, error) {
 	conn, err := net.Dial("tcp", addressWithPort)
 	if err != nil {
-		return nil, err
+		return nil, formatErr(err)
 	}
 	return conn, nil
 
@@ -56,9 +57,9 @@ func (c *Client) initSession() (*smb2.Session, error) {
 	s, err := c.dialer.Dial(c.conn)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return nil, formatErr(err)
 	}
-	return s, nil
+	return s, formatErr(err)
 }
 func (c *Client) CloseConn() {
 	defer c.share.Umount()
@@ -72,7 +73,7 @@ func (c *Client) GetShares() ([]string, error) {
 
 	names, err := c.session.ListSharenames()
 	if err != nil {
-		return nil, err
+		return nil, formatErr(err)
 	}
 
 	return names, nil
@@ -81,7 +82,7 @@ func (c *Client) GetShares() ([]string, error) {
 func (c *Client) Mount(shareName string) (*smb2.Share, error) {
 	fs, err := c.session.Mount(shareName)
 	if err != nil {
-		return nil, err
+		return nil, formatErr(err)
 	}
 
 	return fs, nil
@@ -99,12 +100,12 @@ func (c *Client) AppendBytes(fileName string, bytes []byte, newLine bool) error 
 	f, err := openOrCreate(c, fileName)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return formatErr(err)
 	}
 	defer f.Close()
 	stats, errStats := f.Stat()
 	if errStats != nil {
-		return errStats
+		return formatErr(errStats)
 	}
 
 	if stats.Size() > 0 && newLine {
@@ -113,7 +114,7 @@ func (c *Client) AppendBytes(fileName string, bytes []byte, newLine bool) error 
 	_, err = f.WriteAt(bytes, stats.Size())
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return formatErr(err)
 	}
 	return nil
 }
@@ -123,17 +124,17 @@ func (c *Client) ReadFile(fileName string) (string, error) {
 	f, err := openFile(c, fileName)
 	if err != nil {
 		fmt.Println("errrr: s%", err)
-		return "", err
+		return "", formatErr(err)
 	}
 
 	defer f.Close()
 	_, err = f.Seek(0, io.SeekStart)
 	if err != nil {
-		panic(err)
+		return "", formatErr(err)
 	}
 	bs, err := ioutil.ReadAll(f)
 	if err != nil {
-		panic(err)
+		return "", formatErr(err)
 	}
 
 	return string(bs), nil
@@ -143,18 +144,17 @@ func (c *Client) ReadFileWithOffsets(fileName string, offsetStart int64, dimesio
 
 	f, err := openFile(c, fileName)
 	if err != nil {
-		fmt.Println("errrr: s%", err)
-		return "", err
+		return "", formatErr(err)
 	}
 
 	defer f.Close()
 	_, err = f.Seek(offsetStart, io.SeekStart)
 	if err != nil {
-		panic(err)
+		return "", formatErr(err)
 	}
 	bs, err := ioutil.ReadAll(f)
 	if err != nil {
-		panic(err)
+		return "", formatErr(err)
 	}
 
 	if dimesion > 0 {
@@ -166,30 +166,71 @@ func (c *Client) ReadFileWithOffsets(fileName string, offsetStart int64, dimesio
 
 func (c *Client) RemoveFile(fileName string) error {
 	err := c.share.Remove(fileName)
-	return err
+	return formatErr(err)
 }
 func (c *Client) CreateFolder(name string) error {
 	err := c.share.Mkdir(name, os.ModeDir)
-	return err
+	return formatErr(err)
 }
 func (c *Client) CheckIfFolderExists(name string) (bool, error) {
 	_, err := c.share.ReadDir(name)
 	if err != nil {
-		return false, err
+		return false, formatErr(err)
 	}
-	return true, err
+	return true, formatErr(err)
+}
+func (c *Client) DeleteFolder(name string) error {
+	fInfo, err := c.share.ReadDir(name)
+	if err != nil {
+		return formatErr(err)
+	}
+	if len(fInfo) > 0 {
+		return formatErr(errors.New("directory is not empty"))
+	}
+	err = c.share.Remove(name)
+	if err != nil {
+		return formatErr(err)
+	}
+	return formatErr(err)
+}
+
+func (c *Client) ListFilesInFolder(name string) ([]string, error) {
+	fInfo, err := c.share.ReadDir(name)
+	if err != nil {
+		return nil, formatErr(err)
+	}
+	if len(fInfo) == 0 {
+		return nil, formatErr(err)
+	}
+	var retArray []string
+	for _, info := range fInfo {
+		retArray = append(retArray, info.Name())
+	}
+	return retArray, err
+}
+func (c *Client) DeleteFile(name string) error {
+	err := c.share.Remove(name)
+	return formatErr(err)
 }
 func openOrCreate(c *Client, fileName string) (*smb2.File, error) {
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		f, err = c.share.Create(fileName)
 	}
-	return f, err
+	return f, formatErr(err)
 }
 func openFile(c *Client, fileName string) (*smb2.File, error) {
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
 	if err != nil {
-		return nil, err
+		return nil, formatErr(err)
 	}
 	return f, err
+}
+
+// formatErr add #ERROR# prefix to identify error in retur string
+func formatErr(err error) error {
+	if err != nil {
+		return errors.New("#ERROR# " + err.Error())
+	}
+	return err
 }
