@@ -61,6 +61,13 @@ func (c *Client) initSession() (*smb2.Session, error) {
 	}
 	return s, formatErr(err)
 }
+
+func (c *Client) IsConnected() bool {
+	if c.conn != nil && c.dialer != nil {
+		return true
+	}
+	return false
+}
 func (c *Client) CloseConn() {
 	defer c.share.Umount()
 	defer c.session.Logoff()
@@ -88,6 +95,27 @@ func (c *Client) Mount(shareName string) (*smb2.Share, error) {
 	return fs, nil
 }
 
+func (c *Client) WriteStringFromOffset(fileName string, strToWrite string, offset int64) error {
+	return c.WriteFromOffset(fileName, []byte(strToWrite), offset)
+}
+func (c *Client) WriteFromOffset(fileName string, bytes []byte, offset int64) error {
+	f, err := openOrCreate(c, fileName)
+	if err != nil {
+		fmt.Println(err)
+		return formatErr(err)
+	}
+	defer f.Close()
+	_, errStats := f.Stat()
+	if errStats != nil {
+		return formatErr(errStats)
+	}
+	_, err = f.WriteAt(bytes, offset)
+	if err != nil {
+		fmt.Println(err)
+		return formatErr(err)
+	}
+	return nil
+}
 func (c *Client) AppendLine(fileName string, strToWrite string) error {
 	return c.AppendBytes(fileName, []byte(strToWrite), true)
 }
@@ -168,6 +196,12 @@ func (c *Client) RemoveFile(fileName string) error {
 	err := c.share.Remove(fileName)
 	return formatErr(err)
 }
+
+func (c *Client) RenameFile(pathOld string, pathNew string) error {
+	err := c.share.Rename(pathOld, pathNew)
+	return formatErr(err)
+}
+
 func (c *Client) CreateFolder(name string) error {
 	err := c.share.Mkdir(name, os.ModeDir)
 	return formatErr(err)

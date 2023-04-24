@@ -17,19 +17,13 @@ import (
 )
 import (
 	"fmt"
+	"strings"
 )
 
 // global client
 var gClient *Client.Client
 
 func main() {
-	shares, err := getAllShares("myadd", "myuser", "mypsw")
-	if err != nil {
-		panic(err)
-	}
-	for _, name := range shares {
-		fmt.Println(name)
-	}
 
 }
 
@@ -40,13 +34,21 @@ func InitClient(addressWithPort *C.char, user *C.char, psw *C.char, shareName *C
 	goPsw := C.GoString(psw)
 	goShareName := C.GoString(shareName)
 	gClient = new(Client.Client)
-	gClient.NewClient(goAddressWithPort, goUser, goPsw, goShareName)
+	err := gClient.NewClient(goAddressWithPort, goUser, goPsw, goShareName)
+	if err != nil {
+		return C.CString(err.Error())
+	}
 	return nil
 }
 
 //export CloseConn
 func CloseConn() {
 	gClient.CloseConn()
+}
+
+//export IsConnected
+func IsConnected() bool {
+	return gClient.IsConnected()
 }
 
 //export ListShares
@@ -56,24 +58,28 @@ func ListShares() *C.char {
 	retErr := ""
 	if err != nil {
 		retErr = err.Error()
-		return C.CString(fmt.Sprintf("%s", retErr))
+		return C.CString(retErr)
 	}
-	for _, name := range names {
+	var sb strings.Builder
+	for idx, name := range names {
+		sb.WriteString(name)
+		if idx != len(names) {
+			sb.WriteString(",")
+		}
 		fmt.Println(name)
 	}
-	return nil
+	return C.CString(sb.String())
 	// return C.CString(fmt.Sprintf("%s", ""))
 }
 
-//export AppendLine
-func AppendLine(fileName *C.char, strToWrite *C.char) *C.char {
+//export WriteStringFromOffset
+func WriteStringFromOffset(fileName *C.char, strToWrite *C.char, offset int64) *C.char {
 	goFileName := C.GoString(fileName)
 	goStrToWrite := C.GoString(strToWrite)
-	err := gClient.AppendLine(goFileName, goStrToWrite)
-	retErr := ""
+
+	err := gClient.WriteStringFromOffset(goFileName, goStrToWrite, offset)
 	if err != nil {
-		retErr = err.Error()
-		return C.CString(fmt.Sprintf("%s", retErr))
+		return C.CString(err.Error())
 	}
 	return nil
 }
@@ -82,6 +88,18 @@ func AppendLine(fileName *C.char, strToWrite *C.char) *C.char {
 func ReadFile(fileName *C.char) *C.char {
 	goFileName := C.GoString(fileName)
 	mystr, err := gClient.ReadFile(goFileName)
+	retErr := ""
+	if err != nil {
+		retErr = err.Error()
+		return C.CString(retErr)
+	}
+	return C.CString(mystr)
+}
+
+//export ReadFileWithOffsets
+func ReadFileWithOffsets(fileName *C.char, offset int64, chunckSize int64) *C.char {
+	goFileName := C.GoString(fileName)
+	mystr, err := gClient.ReadFileWithOffsets(goFileName, offset, chunckSize)
 	retErr := ""
 	if err != nil {
 		retErr = err.Error()
@@ -103,15 +121,48 @@ func RemoveFile(fileName *C.char) *C.char {
 	return nil
 }
 
+//export RenameFile
+func RenameFile(oldPath *C.char, newPath *C.char) *C.char {
+	oldP := C.GoString(oldPath)
+	newP := C.GoString(newPath)
+	err := gClient.RenameFile(oldP, newP)
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return nil
+}
+
 //export CreateFolder
-func CreateFolder(name *C.char) C._Bool {
+func CreateFolder(name *C.char) *C.char {
 	goFileName := C.GoString(name)
 	err := gClient.CreateFolder(goFileName)
 
 	if err != nil {
-		panic(err)
+		return C.CString(err.Error())
 	}
-	return true
+	return nil
+}
+
+//export DeleteFolder
+func DeleteFolder(name *C.char) *C.char {
+	goFileName := C.GoString(name)
+	err := gClient.DeleteFolder(goFileName)
+
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return nil
+}
+
+//export CheckIfFolderExists
+func CheckIfFolderExists(name *C.char) *C.char {
+	goFileName := C.GoString(name)
+	exists, err := gClient.CheckIfFolderExists(goFileName)
+
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString(fmt.Sprintf("%t", exists))
 }
 
 //export ListAllShares
