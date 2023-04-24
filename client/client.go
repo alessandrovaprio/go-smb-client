@@ -63,8 +63,9 @@ func (c *Client) initSession() (*smb2.Session, error) {
 }
 
 func (c *Client) IsConnected() bool {
-	if c.conn != nil && c.dialer != nil {
-		return true
+	if c.conn != nil && c.dialer != nil && c.share != nil {
+		_, err := c.GetShares()
+		return err == nil
 	}
 	return false
 }
