@@ -84,6 +84,19 @@ func WriteStringFromOffset(fileName *C.char, strToWrite *C.char, offset int64) *
 	return nil
 }
 
+//export AppendLine
+func AppendLine(fileName *C.char, strToWrite *C.char) *C.char {
+	goFileName := C.GoString(fileName)
+	goStrToWrite := C.GoString(strToWrite)
+	err := gClient.AppendLine(goFileName, goStrToWrite)
+	retErr := ""
+	if err != nil {
+		retErr = err.Error()
+		return C.CString(retErr)
+	}
+	return nil
+}
+
 //export ReadFile
 func ReadFile(fileName *C.char) *C.char {
 	goFileName := C.GoString(fileName)
