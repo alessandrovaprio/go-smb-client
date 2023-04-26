@@ -191,6 +191,24 @@ public class Smb2 {
         return errOrFile;
     }
 
+
+    /**
+     * Read File Starting from specific offset
+     * 
+     * @param filename  is considered as path
+     * @param offset    is starting offset
+     * @param chunkSize is number of byte to read if <= 0 reads all file
+     * @return file as string
+     * @exception if file not found
+     */
+    public String readFileFromOffset(String filename, long offset, long chunkSize) throws FileNotFoundException {
+        String errOrFile = smb.ReadFileWithOffsets(filename, offset, chunkSize);
+        if (errOrFile != null && errOrFile.contains(errStringDetection)) {
+            throw new FileNotFoundException(errOrFile);
+        }
+        return errOrFile;
+    }
+    
     /**
      * Delete File
      * 
