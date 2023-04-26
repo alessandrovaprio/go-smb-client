@@ -26,7 +26,7 @@ public class Smb2 {
     private String shareName;
     private GoSmb smb;
     private final String errStringDetection = "#ERROR#";
-    private String libPath = "../../bin/lib-smb2.so";
+    private String libPath = "../../bin/lib-smb2";
 
     private interface GoSmb extends Library {
 
