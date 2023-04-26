@@ -19,6 +19,9 @@ The binary will be saved in bin folder.
 - main.go contains all the function exposed with C bindings (special headers inside)
 - client.go contains all the implementation in pure GO.
 
+### Example
+- Is present a java example usage with a test file.
+
 # Libraries
 Thanks to this library I simplified my workflow:
  - [go-smb2](https://github.com/hirochachacha/go-smb2)
