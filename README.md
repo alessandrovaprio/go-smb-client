@@ -1,0 +1,26 @@
+# Overview
+Go Library for Samba2 Exported with C bindings.
+It's aim is simplify the samba2 handling in Java.
+It means it'll be callable from Java through JNI.
+
+# Getting Started
+
+## Prerequisites
+ - First of all you need GO installed
+
+## Compilation instruction
+``` 
+$ make
+```
+run above command in order to compile using the Makefile.
+The binary will be saved in bin folder.
+
+### File's explanation
+- main.go contains all the function exposed with C bindings (special headers inside)
+- client.go contains all the implementation in pure GO.
+
+# Libraries
+Thanks to this library I simplified my workflow:
+ - [go-smb2](https://github.com/hirochachacha/go-smb2)
+# License
+distributed under MIT.
