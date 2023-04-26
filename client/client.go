@@ -207,6 +207,10 @@ func (c *Client) CreateFolder(name string) error {
 	err := c.share.Mkdir(name, os.ModeDir)
 	return formatErr(err)
 }
+func (c *Client) RenameFolder(oldPath string, newPath string) error {
+	err := c.share.Rename(oldPath, newPath)
+	return formatErr(err)
+}
 func (c *Client) CheckIfFolderExists(name string) (bool, error) {
 	_, err := c.share.ReadDir(name)
 	if err != nil {
@@ -229,6 +233,13 @@ func (c *Client) DeleteFolder(name string) error {
 	return formatErr(err)
 }
 
+func (c *Client) IsDir(name string) (bool, error) {
+	fInfo, err := c.share.Stat(name)
+	if err != nil {
+		return false, formatErr(err)
+	}
+	return fInfo.IsDir(), nil
+}
 func (c *Client) ListFilesInFolder(name string) ([]string, error) {
 	fInfo, err := c.share.ReadDir(name)
 	if err != nil {

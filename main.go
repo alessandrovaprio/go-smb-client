@@ -167,6 +167,29 @@ func DeleteFolder(name *C.char) *C.char {
 	return nil
 }
 
+//export RenameFolder
+func RenameFolder(oldPath *C.char, newPath *C.char) *C.char {
+	oldP := C.GoString(oldPath)
+	newP := C.GoString(newPath)
+	err := gClient.RenameFolder(oldP, newP)
+
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return nil
+}
+
+//export IsDir
+func IsDir(name *C.char) *C.char {
+	objName := C.GoString(name)
+	isDir, err := gClient.IsDir(objName)
+
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	return C.CString(fmt.Sprintf("%t", isDir))
+}
+
 //export CheckIfFolderExists
 func CheckIfFolderExists(name *C.char) *C.char {
 	goFileName := C.GoString(name)
