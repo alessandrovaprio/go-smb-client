@@ -34,7 +34,6 @@ class TestGo {
 
     @Test
     void writeFiletest() {
-        // Smb2 smb = new Smb2("192.168.122.108:445", "alex", "Vprlsn90","smb-test" );
         try {
             smb.connect();
             double randomNumber = Math.random();
@@ -51,7 +50,6 @@ class TestGo {
 
     @Test
     void foldersTest() {
-        // Smb2 smb = new Smb2("192.168.122.108:445", "alex", "Vprlsn90","smb-test" );
         try {
             smb.connect();
             double randomNumber = Math.random();
@@ -76,7 +74,6 @@ class TestGo {
 
     @Test
     void isConnectedTest() {
-        Smb2 smb = new Smb2("192.168.122.108:445", "alex", "Vprlsn90", "smb-test");
         try {
             smb.connect();
             assertEquals("check", smb.isConnected(), true);
