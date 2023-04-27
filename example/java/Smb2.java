@@ -255,6 +255,22 @@ public class Smb2 {
     }
 
     /**
+     * Rename Folder (move)
+     * 
+     * @param oldPath is considered as path
+     * @param newPath is considered as path
+     * @return if null or empty is OK! otherwise error occurs
+     * @exception if path is not valid
+     */
+    public String renameFile(String oldPath, String newPath) throws InvalidObjectException {
+        String err = smb.RenameFile(oldPath, newPath);
+        if (err != null && err.contains(errStringDetection)) {
+            throw new InvalidObjectException(err);
+        }
+        return err;
+    }
+
+    /**
      * Delete Folder
      * 
      * @param name is considered as path
