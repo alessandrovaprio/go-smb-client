@@ -14,7 +14,9 @@ class TestGo {
     void test() {
         try {
 
-            smb.connect();
+            if(!smb.isConnected()) {
+				smb.connect();				
+			}
             String[] list = smb.listShares();
             smb.appendLine("provona.txt", "ciao");
             smb.writeStringFromOffset("provona.txt", "$333$$", 2000);
@@ -35,7 +37,9 @@ class TestGo {
     @Test
     void writeFiletest() {
         try {
-            smb.connect();
+            if(!smb.isConnected()) {
+				smb.connect();				
+			}
             double randomNumber = Math.random();
             smb.appendLine(randomNumber + "test.txt", "" + randomNumber);
             String res = smb.readFile(randomNumber + "test.txt");
@@ -51,7 +55,9 @@ class TestGo {
     @Test
     void foldersTest() {
         try {
-            smb.connect();
+            if(!smb.isConnected()) {
+				smb.connect();				
+			}
             double randomNumber = Math.random();
             String folderName = (randomNumber + "test").replace(".", "C");
             smb.createFolder(folderName);
@@ -75,14 +81,16 @@ class TestGo {
     @Test
     void isConnectedTest() {
         try {
-            smb.connect();
+            if(!smb.isConnected()) {
+				smb.connect();				
+			}
             assertEquals("check", smb.isConnected(), true);
             smb.disconnect();
             assertEquals("check", smb.isConnected(), false);
         } catch (Exception ex) {
             ex.printStackTrace();
         } finally {
-
+            smb.disconnect();
         }
     }
 
