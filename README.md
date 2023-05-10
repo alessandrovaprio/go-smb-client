@@ -6,13 +6,18 @@ It means it'll be callable from Java through JNI.
 # Getting Started
 
 ## Prerequisites
- - First of all you need GO installed
+ - First of all you need GO or Docker installed
 
 ## Compilation instruction
-``` 
-$ make
-```
-run above command in order to compile using the Makefile.
+- If go installed
+    ``` 
+    $ make
+    ```
+- With Docker
+    ``` 
+    $ make dockerbuild
+    ```
+
 The binary will be saved in bin folder.
 
 ### File's explanation
