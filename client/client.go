@@ -79,12 +79,16 @@ func (c *Client) CloseConn() {
 func (c *Client) GetShares() ([]string, error) {
 	// defer c.session.Logoff()
 
-	names, err := c.session.ListSharenames()
-	if err != nil {
-		return nil, formatErr(err)
-	}
+	if c.session != nil {
 
-	return names, nil
+		names, err := c.session.ListSharenames()
+		if err != nil {
+			return nil, formatErr(err)
+		}
+
+		return names, nil
+	}
+	return nil, formatErr(errors.New("No Active Session"))
 }
 
 func (c *Client) Mount(shareName string) (*smb2.Share, error) {
@@ -279,4 +283,12 @@ func formatErr(err error) error {
 		return errors.New("#ERROR# " + err.Error())
 	}
 	return err
+}
+
+// FormatErrStr add #ERROR# prefix to identify error in retur string
+func (c *Client) FormatErrStr(err error) string {
+	if err != nil {
+		return (errors.New("#ERROR# " + err.Error())).Error()
+	}
+	return ""
 }
