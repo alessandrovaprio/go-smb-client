@@ -5,4 +5,4 @@ build:
 
 dockerbuild:
 	docker build -t go-compiler .
-	docker run -v .:/app go-compiler /bin/sh -c "go build -buildmode=c-shared -o bin/lib-smb2 main.go"
+	docker run -v ${PWD}:/app go-compiler /bin/sh -c "go build -buildmode=c-shared -o bin/lib-smb2 main.go"
