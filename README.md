@@ -27,7 +27,7 @@ The binary will be saved in bin folder.
 ### Example
 - Is present a java example usage with test file.
 
-## NOTES
+# NOTES
 To use JNI it needs to import jna jar library to your Java project. It can be found under example/java/refLibrarires
 # Libraries
 Thanks to this library I simplified my workflow:
