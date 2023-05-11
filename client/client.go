@@ -1,11 +1,14 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 
 	"fmt"
 
@@ -54,6 +57,9 @@ func initDialer(user string, psw string) *smb2.Dialer {
 	return dialer
 }
 func (c *Client) initSession() (*smb2.Session, error) {
+	if c == nil || c.dialer == nil {
+		return nil, formatErr(errors.New("Client Dialer not initialized"))
+	}
 	s, err := c.dialer.Dial(c.conn)
 	if err != nil {
 		fmt.Println(err)
@@ -63,41 +69,52 @@ func (c *Client) initSession() (*smb2.Session, error) {
 }
 
 func (c *Client) IsConnected() bool {
-	if c.conn != nil && c.dialer != nil && c.share != nil {
+	if c != nil && c.conn != nil && c.dialer != nil && c.share != nil {
 		_, err := c.GetShares()
 		return err == nil
 	}
 	return false
 }
 func (c *Client) CloseConn() {
-	defer c.share.Umount()
-	defer c.session.Logoff()
-	defer c.conn.Close()
+	if c != nil {
+		if c.share != nil {
+			defer c.share.Umount()
+		}
+		if c.session != nil {
+			defer c.session.Logoff()
+		}
+		if c.conn != nil {
+			defer c.conn.Close()
+		}
+	}
 
 }
 
 func (c *Client) GetShares() ([]string, error) {
-	// defer c.session.Logoff()
 
-	if c.session != nil {
-
-		names, err := c.session.ListSharenames()
-		if err != nil {
-			return nil, formatErr(err)
-		}
-
-		return names, nil
+	if c == nil || c.session == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
 	}
-	return nil, formatErr(errors.New("No Active Session"))
-}
-
-func (c *Client) Mount(shareName string) (*smb2.Share, error) {
-	fs, err := c.session.Mount(shareName)
+	names, err := c.session.ListSharenames()
 	if err != nil {
 		return nil, formatErr(err)
 	}
 
+	return names, nil
+
+}
+
+func (c *Client) Mount(shareName string) (*smb2.Share, error) {
+	if c == nil || c.session == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
+
+	fs, err := c.session.Mount(shareName)
+	if err != nil {
+		return nil, formatErr(err)
+	}
 	return fs, nil
+
 }
 
 func (c *Client) WriteStringFromOffset(fileName string, strToWrite string, offset int64) error {
@@ -198,31 +215,103 @@ func (c *Client) ReadFileWithOffsets(fileName string, offsetStart int64, dimesio
 }
 
 func (c *Client) RemoveFile(fileName string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	err := c.share.Remove(fileName)
 	return formatErr(err)
+
 }
 
 func (c *Client) RenameFile(pathOld string, pathNew string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	err := c.share.Rename(pathOld, pathNew)
 	return formatErr(err)
 }
+func (c *Client) CheckIfFileExists(name string) (bool, error) {
+	if c == nil || c.share == nil {
+		return false, formatErr(errors.New("Client not initialized"))
+	}
+	_, err := c.share.Lstat(name)
+	if err != nil {
+		return false, formatErr(err)
+	}
+	return true, formatErr(err)
+}
 
+func (c *Client) GetFileStats(name string) (fs.FileInfo, error) {
+	if c == nil || c.share == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
+	stats, err := c.share.Lstat(name)
+	if err != nil {
+		return nil, formatErr(err)
+	}
+	return stats, formatErr(err)
+}
+func (c *Client) GetStats(path string) (fs.FileInfo, error) {
+	isDir, err := c.IsDir(path)
+	if err != nil {
+		return nil, formatErr(err)
+	}
+	if isDir {
+		return c.GetFolderStats(path)
+	}
+	return c.GetFileStats(path)
+}
+func (c *Client) GetStatsAsString(path string) (string, error) {
+	stats, errStats := c.GetStats(path)
+	if errStats != nil {
+		fmt.Println(errStats)
+		return "", errStats
+	}
+	out, errJ := json.Marshal(stats)
+	if errJ != nil {
+		return "", errJ
+	}
+	return string(out), nil
+}
 func (c *Client) CreateFolder(name string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	err := c.share.Mkdir(name, os.ModeDir)
 	return formatErr(err)
+
 }
 func (c *Client) RenameFolder(oldPath string, newPath string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	err := c.share.Rename(oldPath, newPath)
 	return formatErr(err)
 }
 func (c *Client) CheckIfFolderExists(name string) (bool, error) {
+	if c == nil || c.share == nil {
+		return false, formatErr(errors.New("Client not initialized"))
+	}
 	_, err := c.share.ReadDir(name)
 	if err != nil {
 		return false, formatErr(err)
 	}
 	return true, formatErr(err)
 }
+func (c *Client) GetFolderStats(name string) (fs.FileInfo, error) {
+	if c == nil || c.share == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
+	stats, err := c.share.Stat(name)
+	if err != nil {
+		return nil, formatErr(err)
+	}
+	return stats, formatErr(err)
+}
 func (c *Client) DeleteFolder(name string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	fInfo, err := c.share.ReadDir(name)
 	if err != nil {
 		return formatErr(err)
@@ -238,6 +327,9 @@ func (c *Client) DeleteFolder(name string) error {
 }
 
 func (c *Client) IsDir(name string) (bool, error) {
+	if c == nil || c.share == nil {
+		return false, formatErr(errors.New("Client not initialized"))
+	}
 	fInfo, err := c.share.Stat(name)
 	if err != nil {
 		return false, formatErr(err)
@@ -245,6 +337,9 @@ func (c *Client) IsDir(name string) (bool, error) {
 	return fInfo.IsDir(), nil
 }
 func (c *Client) ListFilesInFolder(name string) ([]string, error) {
+	if c == nil || c.share == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
 	fInfo, err := c.share.ReadDir(name)
 	if err != nil {
 		return nil, formatErr(err)
@@ -257,12 +352,19 @@ func (c *Client) ListFilesInFolder(name string) ([]string, error) {
 		retArray = append(retArray, info.Name())
 	}
 	return retArray, err
+
 }
 func (c *Client) DeleteFile(name string) error {
+	if c == nil || c.share == nil {
+		return formatErr(errors.New("Client not initialized"))
+	}
 	err := c.share.Remove(name)
 	return formatErr(err)
 }
 func openOrCreate(c *Client, fileName string) (*smb2.File, error) {
+	if c == nil || c.share == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		f, err = c.share.Create(fileName)
@@ -270,6 +372,9 @@ func openOrCreate(c *Client, fileName string) (*smb2.File, error) {
 	return f, formatErr(err)
 }
 func openFile(c *Client, fileName string) (*smb2.File, error) {
+	if c == nil || c.share == nil {
+		return nil, formatErr(errors.New("Client not initialized"))
+	}
 	f, err := c.share.OpenFile(fileName, os.O_APPEND, os.ModeAppend)
 	if err != nil {
 		return nil, formatErr(err)
@@ -279,7 +384,7 @@ func openFile(c *Client, fileName string) (*smb2.File, error) {
 
 // formatErr add #ERROR# prefix to identify error in retur string
 func formatErr(err error) error {
-	if err != nil {
+	if err != nil && (!strings.Contains(err.Error(), "#ERROR#")) {
 		return errors.New("#ERROR# " + err.Error())
 	}
 	return err

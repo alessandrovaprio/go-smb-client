@@ -25,7 +25,6 @@ import (
 var gClient *Client.Client
 
 func main() {
-
 }
 
 //export InitClient
@@ -175,6 +174,35 @@ func RenameFile(oldPath *C.char, newPath *C.char) *C.char {
 			return C.CString(err.Error())
 		}
 		return nil
+	}
+	return C.CString(formatErr("No Active Sessions"))
+}
+
+//export GetStats
+func GetStats(filePath *C.char) *C.char {
+	if gClient != nil {
+
+		filepath := C.GoString(filePath)
+		stats, err := gClient.GetStatsAsString(filepath)
+		if err != nil {
+			return C.CString(err.Error())
+		}
+		return C.CString(string(stats))
+	}
+	return C.CString(formatErr("No Active Sessions"))
+}
+
+//export CheckIfFileExists
+func CheckIfFileExists(name *C.char) *C.char {
+	if gClient != nil {
+
+		goFileName := C.GoString(name)
+		exists, err := gClient.CheckIfFileExists(goFileName)
+
+		if err != nil {
+			return C.CString(err.Error())
+		}
+		return C.CString(fmt.Sprintf("%t", exists))
 	}
 	return C.CString(formatErr("No Active Sessions"))
 }
